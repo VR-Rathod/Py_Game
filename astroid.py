@@ -24,17 +24,36 @@ pygame.mixer.music.play(-1)
 
 
 class GameObject(pygame.sprite.Sprite):
-    def __init__(self, color, size, position=None):
+    def __init__(self, image_path, size, position=None):
         super().__init__()
-        self.image = pygame.Surface(size)
-        self.image.fill(color)
+        original_image = pygame.image.load(image_path)
+        self.image = pygame.transform.scale(original_image, size)
         self.rect = self.image.get_rect()
         if position:
             self.rect.topleft = position
 
-class Player(GameObject):
+
+class Power(GameObject):
     def __init__(self):
-        super().__init__(White, (P_Size, P_Size), ((Width - P_Size) // 2, Height - P_Size))
+        super().__init__(Green, (Power_Size, Power_Size), (random.randint(0, Width - Power_Size), -Power_Size))
+
+    def update(self):
+        global power_spawn_timer
+        global power_spawn_delay
+        self.rect.y += Power_Speed
+        if self.rect.y > Height:
+            self.reset_position()
+            power_spawn_timer = 0
+
+    def reset_position(self):
+        self.rect.y = -Power_Size
+        self.rect.x = random.randint(0, Width - Power_Size)
+
+
+
+class Player(GameObject):
+    def __init__(self, image_path):
+        super().__init__(image_path, (P_Size, P_Size), ((Width - P_Size) // 2, Height - P_Size))
         self.original_color = self.image.get_at((0, 0))
         self.invincible = False
         self.invincible_timer = 0
@@ -64,8 +83,8 @@ class Player(GameObject):
 
 
 class Block(GameObject):
-    def __init__(self, player_position):
-        super().__init__(random_color(), (B_Size, B_Size), (random_position(player_position), -B_Size))
+    def __init__(self, image_path, player_position):
+        super().__init__(image_path, (B_Size, B_Size), (random_position(player_position), -B_Size))
         self.speed = random.uniform(1.0, 2.0)
 
     def update(self):
@@ -80,38 +99,25 @@ class Block(GameObject):
         self.speed = random.uniform(1.0, 2.0)
 
 
-class Power(GameObject):
-    def __init__(self):
-        super().__init__(Green, (Power_Size, Power_Size), (random.randint(0, Width - Power_Size), -Power_Size))
-
-    def update(self):
-        global power_spawn_timer
-        global power_spawn_delay
-        self.rect.y += Power_Speed
-        if self.rect.y > Height:
-            self.reset_position()
-            power_spawn_timer = 0
-
-    def reset_position(self):
-        self.rect.y = -Power_Size
-        self.rect.x = random.randint(0, Width - Power_Size)
-
-
 def random_color():
     return random.randint(100, 200), random.randint(100, 200), random.randint(100, 200)
+
 
 def random_position(player_x, pattern_factor=100):
     return random.randint(max(0, player_x - pattern_factor), min(Width - B_Size, player_x + pattern_factor))
 
+
 def start_new_block(player_position):
-    block = Block(player_position)
+    block = Block("s.png", player_position)
     All_Sprite.add(block)
     Block_Group.add(block)
+
 
 def start_new_power():
     power = Power()
     All_Sprite.add(power)
     Power_Group.add(power)
+
 
 def game_over():
     global score
@@ -149,6 +155,7 @@ def game_over():
 
     return False
 
+
 def restart_game():
     global score
     global block_speed
@@ -162,12 +169,12 @@ def restart_game():
     All_Sprite = pygame.sprite.Group()
     Block_Group = pygame.sprite.Group()
     Power_Group = pygame.sprite.Group()
-    player = Player()
+    player = Player("s.png")
     All_Sprite.add(player)
     pygame.mixer.music.play(-1)
 
     for _ in range(Min_Blocks_To_Spawn):
-        block = Block(player.rect.x)
+        block = Block("s.png", player.rect.x)
         All_Sprite.add(block)
         Block_Group.add(block)
 
@@ -180,6 +187,7 @@ def restart_game():
     block_speed = 3
     power_spawn_timer = 0
 
+
 screen = pygame.display.set_mode((Width, Height))
 pygame.display.set_caption("Falling Box")
 
@@ -188,7 +196,7 @@ clock = pygame.time.Clock()
 All_Sprite = pygame.sprite.Group()
 Block_Group = pygame.sprite.Group()
 Power_Group = pygame.sprite.Group()
-player = Player()
+player = Player("s.png")
 All_Sprite.add(player)
 
 score = 0
@@ -217,6 +225,7 @@ class MusicButton:
         else:
             pygame.mixer.music.pause()
 
+
 music_button = MusicButton((Width - 100, 10), (90, 30))
 
 # Main Game- Loop
@@ -243,7 +252,6 @@ while True:
 
     if power_spawn_timer > 0:
         power_spawn_timer -= 1
-    
 
     if pygame.sprite.spritecollide(player, Block_Group, False):
         if not player.invincible:
